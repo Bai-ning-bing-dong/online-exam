@@ -11,7 +11,41 @@
         <h4>考试成绩统计</h4>
         <a href="/teacher/index" class="btn btn-outline-secondary btn-sm">返回首页</a>
     </div>
-    <p class="text-muted">功能开发中...</p>
+
+    <table class="table table-bordered table-hover">
+        <thead class="table-primary">
+        <tr>
+            <th>课程名称</th>
+            <th>参考人数</th>
+            <th>最高分</th>
+            <th>最低分</th>
+            <th>平均分</th>
+            <th>及格人数</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="s : ${stats}">
+            <td th:text="${s.courseName}"></td>
+            <td th:text="${s.totalCount}"></td>
+            <td th:text="${s.maxScore}"></td>
+            <td th:text="${s.minScore}"></td>
+            <td th:text="${s.avgScore}"></td>
+            <td>
+                <span th:text="${s.passCount}"></span>
+                /
+                <span th:text="${s.totalCount}"></span>
+            </td>
+            <td>
+                <a th:href="@{/teacher/results/{id}(id=${s.examId})}"
+                   class="btn btn-sm btn-outline-primary">查看明细</a>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(stats)}">
+            <td colspan="7" class="text-center text-muted">暂无考试数据</td>
+        </tr>
+        </tbody>
+    </table>
 </div>
 </body>
 </html>

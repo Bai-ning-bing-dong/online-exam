@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <title>教师首页</title>
@@ -9,7 +9,9 @@
 <div class="container mt-5">
     <h4>欢迎，<span th:text="${session.teacher.name}"></span> 老师</h4>
     <div class="mt-4">
-        <a href="/teacher/questions" class="btn btn-primary me-3">题目管理</a>
+        <a href="/teacher/questions" class="btn btn-primary me-2">题库管理</a>
+        <a href="/teacher/papers" class="btn btn-primary me-2">试卷管理</a>
+        <a href="/teacher/exams" class="btn btn-primary me-2">考试管理</a>
         <a href="/teacher/results" class="btn btn-outline-primary">成绩统计</a>
     </div>
 </div>

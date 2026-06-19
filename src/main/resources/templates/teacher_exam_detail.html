@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>考试明细</title>
+    <link th:href="@{/bootstrap5/css/bootstrap.min.css}" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4>考试明细</h4>
+        <a href="/teacher/results" class="btn btn-outline-secondary btn-sm">返回统计</a>
+    </div>
+
+    <table class="table table-bordered table-hover">
+        <thead class="table-primary">
+        <tr>
+            <th>学号</th>
+            <th>姓名</th>
+            <th>班级</th>
+            <th>总分</th>
+            <th>是否及格</th>
+            <th>提交时间</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${results}">
+            <td th:text="${r.studentId}"></td>
+            <td th:text="${r.studentName}"></td>
+            <td th:text="${r.className}"></td>
+            <td th:text="${r.totalScore}"></td>
+            <td>
+                    <span th:text="${r.isPass}"
+                          th:class="${r.isPass == '及格'} ? 'badge bg-success' : 'badge bg-danger'">
+                    </span>
+            </td>
+            <td th:text="${r.submittedAt}"></td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(results)}">
+            <td colspan="6" class="text-center text-muted">暂无学生成绩</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

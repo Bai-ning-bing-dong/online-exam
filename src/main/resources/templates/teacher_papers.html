@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>试卷管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4>试卷管理</h4>
+        <div>
+            <button class="btn btn-success btn-sm me-2"
+                    onclick="document.getElementById('createForm').style.display='block'">
+                + 新建试卷
+            </button>
+            <a href="/teacher/index" class="btn btn-outline-secondary btn-sm">返回首页</a>
+        </div>
+    </div>
+
+    <!-- 新建试卷表单 -->
+    <div id="createForm" style="display:none" class="card mb-4">
+        <div class="card-body">
+            <form method="post" action="/teacher/paper/create" class="d-flex gap-2">
+                <label>
+                    <input type="text" name="paperName" class="form-control"
+                           placeholder="输入试卷名称" required>
+                </label>
+                <button type="submit" class="btn btn-primary btn-sm">创建</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm"
+                        onclick="document.getElementById('createForm').style.display='none'">
+                    取消
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 试卷列表 -->
+    <table class="table table-bordered table-hover">
+        <thead class="table-primary">
+        <tr>
+            <th>试卷名称</th>
+            <th>总分</th>
+            <th>创建时间</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${papers}">
+            <td th:text="${p['paperName']}"></td>
+            <td th:text="${p['totalScore']}"></td>
+            <td th:text="${p['createdAt']}"></td>
+            <td>
+                <a th:href="@{/teacher/paper/{id}(id=${p['paperId']})}"
+                   class="btn btn-sm btn-outline-primary">组卷</a>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(papers)}">
+            <td colspan="4" class="text-center text-muted">暂无试卷</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

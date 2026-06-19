@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>考试管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4>考试管理</h4>
+        <div>
+            <button class="btn btn-success btn-sm me-2"
+                    onclick="document.getElementById('createForm').style.display='block'">
+                + 创建考试
+            </button>
+            <a href="/teacher/index" class="btn btn-outline-secondary btn-sm">返回首页</a>
+        </div>
+    </div>
+
+    <!-- 创建考试表单 -->
+    <div id="createForm" style="display:none" class="card mb-4">
+        <div class="card-body">
+            <h6 class="card-title mb-3">创建新考试</h6>
+            <form method="post" action="/teacher/exam/create">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">选择课程</label>
+                        <label>
+                            <select name="courseId" class="form-select" required>
+                                <option value="">请选择课程</option>
+                                <option th:each="c : ${courses}"
+                                        th:value="${c['courseId']}"
+                                        th:text="${c['courseName']}"></option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">选择试卷</label>
+                        <label>
+                            <select name="paperId" class="form-select" required>
+                                <option value="">请选择试卷</option>
+                                <option th:each="p : ${papers}"
+                                        th:value="${p['paperId']}"
+                                        th:text="${p['paperName']} + '（' + ${p['totalScore']} + '分）'"></option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">考试时长（分钟）</label>
+                        <label>
+                            <input type="number" name="duration" class="form-control"
+                                   value="60" min="1" required>
+                        </label>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">开始时间</label>
+                        <label>
+                            <input type="datetime-local" name="startTime"
+                                   class="form-control" required>
+                        </label>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary btn-sm">创建</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm ms-2"
+                                onclick="document.getElementById('createForm').style.display='none'">
+                            取消
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 考试列表 -->
+    <table class="table table-bordered table-hover">
+        <thead class="table-primary">
+        <tr>
+            <th>课程名称</th>
+            <th>试卷名称</th>
+            <th>开始时间</th>
+            <th>时长</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="e : ${exams}">
+            <td th:text="${e['courseName']}"></td>
+            <td th:text="${e['paperName']}"></td>
+            <td th:text="${e['startTime']}"></td>
+            <td th:text="${e['duration']} + ' 分钟'"></td>
+            <td>
+                    <span th:text="${e['statusName']}"
+                          th:class="${e['status']} == 0 ? 'badge bg-secondary' :
+                                    (${e['status']} == 1 ? 'badge bg-success' : 'badge bg-dark')">
+                    </span>
+            </td>
+            <td>
+                <!-- 未开始 → 可以开启 -->
+                <form th:if="${e['status']} == 0"
+                      th:action="@{/teacher/exam/{id}/start(id=${e['examId']})}"
+                      method="post" class="d-inline">
+                    <button class="btn btn-sm btn-success">开启考试</button>
+                </form>
+                <!-- 进行中 → 可以结束 -->
+                <form th:if="${e['status']} == 1"
+                      th:action="@{/teacher/exam/{id}/end(id=${e['examId']})}"
+                      method="post" class="d-inline"
+                      onsubmit="return confirm('确认结束考试？结束后学生无法继续作答')">
+                    <button class="btn btn-sm btn-danger">结束考试</button>
+                </form>
+                <!-- 已结束 → 查看成绩 -->
+                <a th:if="${e['status']} == 2"
+                   th:href="@{/teacher/results/{id}(id=${e['examId']})}"
+                   class="btn btn-sm btn-outline-primary">查看成绩</a>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(exams)}">
+            <td colspan="6" class="text-center text-muted">暂无考试安排</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

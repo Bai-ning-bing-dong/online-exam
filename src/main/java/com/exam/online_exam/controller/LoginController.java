@@ -11,7 +11,6 @@ import org.springframework.ui.Model;
 import java.util.List;
 import java.util.Map;
 
-
 @Controller
 public class LoginController {
 
@@ -55,5 +54,35 @@ public class LoginController {
                 examResultMapper.getResultsByStudentId(student.getStudentId());
         model.addAttribute("results", results);
         return "student_results";
+    }
+
+    // 跳转注册页
+    @GetMapping("/register")
+    public String registerPage() {
+        return "register";
+    }
+
+    // 处理注册
+    @PostMapping("/register")
+    public String register(@RequestParam String studentId,
+                           @RequestParam String name,
+                           @RequestParam String className,
+                           @RequestParam String gender,
+                           @RequestParam String password,
+                           @RequestParam String confirmPassword,
+                           @RequestParam(required = false) String email,
+                           Model model) {
+        // 两次密码不一致
+        if (!password.equals(confirmPassword)) {
+            model.addAttribute("error", "两次密码输入不一致");
+            return "register";
+        }
+        // 学号已存在
+        if (studentMapper.checkStudentExists(studentId) > 0) {
+            model.addAttribute("error", "该学号已被注册");
+            return "register";
+        }
+        studentMapper.register(studentId, name, className, gender, password, email);
+        return "redirect:/?registered=1";
     }
 }

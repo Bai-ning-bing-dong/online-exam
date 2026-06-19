@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>修改题目</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4" style="max-width:700px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>修改题目</h4>
+    <a href="/teacher/questions" class="btn btn-outline-secondary btn-sm">返回题库</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <form th:action="@{/teacher/question/{id}/update(id=${q['question_id']})}"
+            method="post">
+        <div class="mb-3">
+          <label class="form-label">题型</label>
+          <label>
+            <select name="questionType" class="form-select">
+              <option value="1" th:selected="${q['question_type']} == 1">单选题</option>
+              <option value="2" th:selected="${q['question_type']} == 2">多选题</option>
+              <option value="3" th:selected="${q['question_type']} == 3">判断题</option>
+            </select>
+          </label>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">题干</label>
+          <label>
+<textarea name="content" class="form-control" rows="3"
+          th:text="${q['content']}"></textarea>
+          </label>
+        </div>
+        <div class="row">
+          <div class="col-6 mb-3">
+            <label class="form-label">选项A</label>
+            <label>
+              <input type="text" name="optionA" class="form-control"
+                     th:value="${q['option_a']}">
+            </label>
+          </div>
+          <div class="col-6 mb-3">
+            <label class="form-label">选项B</label>
+            <label>
+              <input type="text" name="optionB" class="form-control"
+                     th:value="${q['option_b']}">
+            </label>
+          </div>
+          <div class="col-6 mb-3">
+            <label class="form-label">选项C（可选）</label>
+            <label>
+              <input type="text" name="optionC" class="form-control"
+                     th:value="${q['option_c']}">
+            </label>
+          </div>
+          <div class="col-6 mb-3">
+            <label class="form-label">选项D（可选）</label>
+            <label>
+              <input type="text" name="optionD" class="form-control"
+                     th:value="${q['option_d']}">
+            </label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-6 mb-3">
+            <label class="form-label">正确答案</label>
+            <label>
+              <input type="text" name="correctAnswer" class="form-control"
+                     th:value="${q['correct_answer']}">
+            </label>
+          </div>
+          <div class="col-6 mb-3">
+            <label class="form-label">分值</label>
+            <label>
+              <input type="number" name="score" class="form-control"
+                     th:value="${q['score']}">
+            </label>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">保存修改</button>
+      </form>
+    </div>
+  </div>
+</div>
+</body>
+</html>
