@@ -33,16 +33,30 @@ public class ExamController {
         Student student = (Student) session.getAttribute("student");
         if (student == null) return "redirect:/";
 
-        // 检查是否已经参加过
         int count = examMapper.checkAlreadySubmitted(student.getStudentId(), examId);
         if (count > 0) {
+            // 检查是否已经有成绩（答完了）
             model.addAttribute("msg", "你已经参加过该考试");
             return "exam_done";
+        }
+
+        // 记录开始时间（已记录过则不更新）
+        examMapper.recordStartTime(student.getStudentId(), examId);
+
+        // 计算剩余秒数
+        int duration = examMapper.getExamDuration(examId);
+        Integer elapsed = examMapper.getElapsedSeconds(student.getStudentId(), examId);
+        int remainSeconds = duration * 60 - (elapsed == null ? 0 : elapsed);
+
+        // 时间已到，直接跳转成绩页
+        if (remainSeconds <= 0) {
+            return "redirect:/student/results";
         }
 
         List<Map<String, Object>> questions = examMapper.getQuestionsByExamId(examId);
         model.addAttribute("questions", questions);
         model.addAttribute("examId", examId);
+        model.addAttribute("remainSeconds", remainSeconds);
         return "exam_detail";
     }
 
@@ -62,6 +76,7 @@ public class ExamController {
                         questionId, entry.getValue());
             }
         }
+        examMapper.markSubmitted(student.getStudentId(), examId);
         return "redirect:/student/results";
     }
 }

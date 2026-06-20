@@ -35,7 +35,31 @@ public interface ExamMapper {
 
     // 检查是否已经参加过该考试
     @Select("SELECT COUNT(*) FROM exam_result " +
-            "WHERE student_id=#{studentId} AND exam_id=#{examId}")
+            "WHERE student_id=#{studentId} AND exam_id=#{examId} " +
+            "AND submitted_at IS NOT NULL")
     int checkAlreadySubmitted(@Param("studentId") String studentId,
                               @Param("examId") int examId);
+
+    // 查询考试时长
+    @Select("SELECT duration FROM exam WHERE exam_id=#{examId}")
+    int getExamDuration(int examId);
+
+    // 记录开始答题时间
+    @Insert("INSERT INTO exam_result(student_id, exam_id, total_score, is_pass, start_time) " +
+            "VALUES(#{studentId}, #{examId}, 0, 0, NOW()) " +
+            "ON DUPLICATE KEY UPDATE " +
+            "start_time = IF(start_time IS NULL, NOW(), start_time)")
+    void recordStartTime(@Param("studentId") String studentId,
+                         @Param("examId") int examId);
+
+    // 查询已经过了多少秒
+    @Select("SELECT TIMESTAMPDIFF(SECOND, start_time, NOW()) " +
+            "FROM exam_result WHERE student_id=#{studentId} AND exam_id=#{examId}")
+    Integer getElapsedSeconds(@Param("studentId") String studentId,
+                              @Param("examId") int examId);
+
+    @Update("UPDATE exam_result SET submitted_at=NOW() " +
+            "WHERE student_id=#{studentId} AND exam_id=#{examId}")
+    void markSubmitted(@Param("studentId") String studentId,
+                       @Param("examId") int examId);
 }
