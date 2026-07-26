@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <title>考试答题</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/bootstrap5/css/bootstrap.min.css}" rel="stylesheet">
     <style>
         .countdown-bar {
             position: sticky;
@@ -25,6 +25,8 @@
 </head>
 <body>
 <div class="container mt-3">
+
+    <div th:if="${param.error}" class="alert alert-danger" th:text="${param.error}"></div>
 
     <!-- 顶部倒计时栏 -->
     <div class="countdown-bar">
@@ -55,7 +57,8 @@
                 <div class="ms-3">
                     <div class="form-check">
                         <label>
-                            <input class="form-check-input" type="radio"
+                            <input class="form-check-input"
+                                   th:type="${q['questionType'] == 2 ? 'checkbox' : 'radio'}"
                                    th:name="'answer_' + ${q['questionId']}" value="A">
                         </label>
                         <label class="form-check-label">
@@ -64,7 +67,8 @@
                     </div>
                     <div class="form-check">
                         <label>
-                            <input class="form-check-input" type="radio"
+                            <input class="form-check-input"
+                                   th:type="${q['questionType'] == 2 ? 'checkbox' : 'radio'}"
                                    th:name="'answer_' + ${q['questionId']}" value="B">
                         </label>
                         <label class="form-check-label">
@@ -73,7 +77,8 @@
                     </div>
                     <div class="form-check" th:if="${q['optionC'] != null}">
                         <label>
-                            <input class="form-check-input" type="radio"
+                            <input class="form-check-input"
+                                   th:type="${q['questionType'] == 2 ? 'checkbox' : 'radio'}"
                                    th:name="'answer_' + ${q['questionId']}" value="C">
                         </label>
                         <label class="form-check-label">
@@ -82,7 +87,8 @@
                     </div>
                     <div class="form-check" th:if="${q['optionD'] != null}">
                         <label>
-                            <input class="form-check-input" type="radio"
+                            <input class="form-check-input"
+                                   th:type="${q['questionType'] == 2 ? 'checkbox' : 'radio'}"
                                    th:name="'answer_' + ${q['questionId']}" value="D">
                         </label>
                         <label class="form-check-label">
@@ -98,6 +104,19 @@
                     onclick="submitConfirm()">提交答卷</button>
         </div>
     </form>
+
+    <dialog id="submitDialog" class="border-0 rounded-3 shadow p-0">
+        <div class="p-4" style="min-width: 320px">
+            <h5 class="mb-3">确认提交答卷？</h5>
+            <p class="text-muted">提交后将立即评分，且不能再修改答案。</p>
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary"
+                        onclick="closeSubmitDialog()">继续检查</button>
+                <button type="button" class="btn btn-success" id="confirmSubmit"
+                        onclick="submitExam()">确认提交</button>
+            </div>
+        </div>
+    </dialog>
 </div>
 
 <script th:inline="javascript">
@@ -119,9 +138,17 @@
     }
 
     function submitConfirm() {
-        if (confirm('确认提交答卷？提交后不可修改')) {
-            document.getElementById('examForm').submit();
-        }
+        document.getElementById('submitDialog').showModal();
+    }
+
+    function closeSubmitDialog() {
+        document.getElementById('submitDialog').close();
+    }
+
+    function submitExam() {
+        window.onbeforeunload = null;
+        document.getElementById('confirmSubmit').disabled = true;
+        document.getElementById('examForm').submit();
     }
 
     // 每秒倒计时
@@ -132,6 +159,7 @@
         if (remainSeconds <= 0) {
             clearInterval(timer);
             alert('考试时间到，自动提交！');
+            window.onbeforeunload = null;
             document.getElementById('examForm').submit();
         }
     }, 1000);

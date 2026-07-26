@@ -2,11 +2,15 @@ package com.exam.online_exam.controller;
 
 import com.exam.online_exam.entity.Teacher;
 import com.exam.online_exam.mapper.TeacherMapper;
+import com.exam.online_exam.util.AnswerUtils;
+import com.exam.online_exam.util.PasswordUtil;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Map;
 
@@ -22,9 +26,13 @@ public class TeacherController {
     public String login(@RequestParam String teacherId,
                         @RequestParam String password,
                         HttpSession session) {
-        Teacher teacher = teacherMapper.login(teacherId, password);
-        if (teacher != null) {
+        Teacher teacher = teacherMapper.findById(teacherId.trim());
+        if (teacher != null && passwordMatches(password, teacher.getPassword())) {
+            if (!PasswordUtil.isEncoded(teacher.getPassword())) {
+                teacherMapper.updatePassword(teacher.getTeacherId(), PasswordUtil.hash(password));
+            }
             session.setAttribute("teacher", teacher);
+            session.removeAttribute("student");
             return "redirect:/teacher/index";
         }
         return "redirect:/?error=1";
@@ -61,8 +69,10 @@ public class TeacherController {
                               HttpSession session) {
         Teacher teacher = (Teacher) session.getAttribute("teacher");
         if (teacher == null) return "redirect:/";
+        validateQuestion(content, questionType, correctAnswer, score);
         teacherMapper.addQuestion(teacher.getTeacherId(), questionType,
-                content, optionA, optionB, optionC, optionD, correctAnswer, score);
+                content.trim(), optionA, optionB, optionC, optionD,
+                AnswerUtils.normalize(correctAnswer), score);
         return "redirect:/teacher/questions";
     }
 
@@ -79,7 +89,9 @@ public class TeacherController {
     @GetMapping("/results/{examId}")
     public String examDetail(@PathVariable int examId,
                              HttpSession session, Model model) {
-        if (session.getAttribute("teacher") == null) return "redirect:/";
+        Teacher teacher = (Teacher) session.getAttribute("teacher");
+        if (teacher == null) return "redirect:/";
+        requireOwnedExam(teacher, examId);
         List<Map<String, Object>> results =
                 teacherMapper.getStudentResultsByExam(examId);
         model.addAttribute("results", results);
@@ -101,7 +113,10 @@ public class TeacherController {
     public String createPaper(@RequestParam String paperName, HttpSession session) {
         Teacher teacher = (Teacher) session.getAttribute("teacher");
         if (teacher == null) return "redirect:/";
-        teacherMapper.createPaper(paperName, teacher.getTeacherId());
+        if (paperName == null || paperName.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "试卷名称不能为空");
+        }
+        teacherMapper.createPaper(paperName.trim(), teacher.getTeacherId());
         return "redirect:/teacher/papers";
     }
 
@@ -111,6 +126,7 @@ public class TeacherController {
                               HttpSession session, Model model) {
         Teacher teacher = (Teacher) session.getAttribute("teacher");
         if (teacher == null) return "redirect:/";
+        requireOwnedPaper(teacher, paperId);
         model.addAttribute("paperId", paperId);
         model.addAttribute("questions", teacherMapper.getQuestionsByPaper(paperId));
         model.addAttribute("available", teacherMapper.getAvailableQuestions(
@@ -123,7 +139,10 @@ public class TeacherController {
     public String addQuestion(@PathVariable int paperId,
                               @PathVariable int questionId,
                               HttpSession session) {
-        if (session.getAttribute("teacher") == null) return "redirect:/";
+        Teacher teacher = (Teacher) session.getAttribute("teacher");
+        if (teacher == null) return "redirect:/";
+        requireOwnedPaper(teacher, paperId);
+        requireOwnedQuestion(teacher, questionId);
         teacherMapper.addQuestionToPaper(paperId, questionId);
         teacherMapper.updatePaperTotalScore(paperId);
         return "redirect:/teacher/paper/" + paperId;
@@ -134,7 +153,10 @@ public class TeacherController {
     public String removeQuestion(@PathVariable int paperId,
                                  @PathVariable int questionId,
                                  HttpSession session) {
-        if (session.getAttribute("teacher") == null) return "redirect:/";
+        Teacher teacher = (Teacher) session.getAttribute("teacher");
+        if (teacher == null) return "redirect:/";
+        requireOwnedPaper(teacher, paperId);
+        requireOwnedQuestion(teacher, questionId);
         teacherMapper.removeQuestionFromPaper(paperId, questionId);
         teacherMapper.updatePaperTotalScore(paperId);
         return "redirect:/teacher/paper/" + paperId;
@@ -158,7 +180,15 @@ public class TeacherController {
                              @RequestParam String startTime,
                              @RequestParam int duration,
                              HttpSession session) {
-        if (session.getAttribute("teacher") == null) return "redirect:/";
+        Teacher teacher = (Teacher) session.getAttribute("teacher");
+        if (teacher == null) return "redirect:/";
+        requireOwnedPaper(teacher, paperId);
+        if (teacherMapper.ownsCourse(teacher.getTeacherId(), courseId) == 0) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无权使用该课程");
+        }
+        if (duration <= 0 || startTime == null || startTime.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "考试时间和时长不合法");
+        }
         teacherMapper.createExam(courseId, paperId, startTime, duration);
         return "redirect:/teacher/exams";
     }
@@ -166,7 +196,9 @@ public class TeacherController {
     // 开启考试
     @PostMapping("/exam/{examId}/start")
     public String startExam(@PathVariable int examId, HttpSession session) {
-        if (session.getAttribute("teacher") == null) return "redirect:/";
+        Teacher teacher = (Teacher) session.getAttribute("teacher");
+        if (teacher == null) return "redirect:/";
+        requireOwnedExam(teacher, examId);
         teacherMapper.updateExamStatus(examId, 1);
         return "redirect:/teacher/exams";
     }
@@ -174,7 +206,9 @@ public class TeacherController {
     // 结束考试
     @PostMapping("/exam/{examId}/end")
     public String endExam(@PathVariable int examId, HttpSession session) {
-        if (session.getAttribute("teacher") == null) return "redirect:/";
+        Teacher teacher = (Teacher) session.getAttribute("teacher");
+        if (teacher == null) return "redirect:/";
+        requireOwnedExam(teacher, examId);
         teacherMapper.updateExamStatus(examId, 2);
         return "redirect:/teacher/exams";
     }
@@ -183,7 +217,9 @@ public class TeacherController {
     @GetMapping("/question/{questionId}/edit")
     public String editQuestion(@PathVariable int questionId,
                                HttpSession session, Model model) {
-        if (session.getAttribute("teacher") == null) return "redirect:/";
+        Teacher teacher = (Teacher) session.getAttribute("teacher");
+        if (teacher == null) return "redirect:/";
+        requireOwnedQuestion(teacher, questionId);
         model.addAttribute("q", teacherMapper.getQuestionById(questionId));
         return "teacher_question_edit";
     }
@@ -200,9 +236,13 @@ public class TeacherController {
                                  @RequestParam String correctAnswer,
                                  @RequestParam double score,
                                  HttpSession session) {
-        if (session.getAttribute("teacher") == null) return "redirect:/";
+        Teacher teacher = (Teacher) session.getAttribute("teacher");
+        if (teacher == null) return "redirect:/";
+        requireOwnedQuestion(teacher, questionId);
+        validateQuestion(content, questionType, correctAnswer, score);
         teacherMapper.updateQuestion(questionId, content, questionType,
-                optionA, optionB, optionC, optionD, correctAnswer, score);
+                optionA, optionB, optionC, optionD,
+                AnswerUtils.normalize(correctAnswer), score);
         return "redirect:/teacher/questions";
     }
 
@@ -210,9 +250,43 @@ public class TeacherController {
     @PostMapping("/question/{questionId}/delete")
     public String deleteQuestion(@PathVariable int questionId,
                                  HttpSession session) {
-        if (session.getAttribute("teacher") == null) return "redirect:/";
+        Teacher teacher = (Teacher) session.getAttribute("teacher");
+        if (teacher == null) return "redirect:/";
+        requireOwnedQuestion(teacher, questionId);
         teacherMapper.deletePaperQuestion(questionId);
         teacherMapper.deleteQuestion(questionId);
         return "redirect:/teacher/questions";
+    }
+
+    private boolean passwordMatches(String rawPassword, String storedPassword) {
+        return PasswordUtil.isEncoded(storedPassword)
+                ? PasswordUtil.matches(rawPassword, storedPassword)
+                : storedPassword != null && storedPassword.equals(rawPassword);
+    }
+
+    private void validateQuestion(String content, int questionType,
+                                  String correctAnswer, double score) {
+        if (content == null || content.isBlank() || questionType < 1 || questionType > 3
+                || AnswerUtils.normalize(correctAnswer).isEmpty() || score <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "题目信息不合法");
+        }
+    }
+
+    private void requireOwnedQuestion(Teacher teacher, int questionId) {
+        if (teacherMapper.ownsQuestion(teacher.getTeacherId(), questionId) == 0) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无权操作该题目");
+        }
+    }
+
+    private void requireOwnedPaper(Teacher teacher, int paperId) {
+        if (teacherMapper.ownsPaper(teacher.getTeacherId(), paperId) == 0) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无权操作该试卷");
+        }
+    }
+
+    private void requireOwnedExam(Teacher teacher, int examId) {
+        if (teacherMapper.ownsExam(teacher.getTeacherId(), examId) == 0) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无权操作该考试");
+        }
     }
 }

@@ -8,58 +8,61 @@ import java.util.Map;
 @Mapper
 public interface TeacherMapper {
 
-    @Select("SELECT * FROM teacher WHERE teacher_id=#{teacherId} AND password=#{password}")
-    Teacher login(@Param("teacherId") String teacherId,
-                  @Param("password") String password);
+    @Select("SELECT * FROM teacher WHERE teacher_id=#{teacherId}")
+    Teacher findById(@Param("teacherId") String teacherId);
 
-    @Select("SELECT q.question_id AS questionId, q.content, " +
-            "CASE q.question_type WHEN 1 THEN '单选' WHEN 2 THEN '多选' WHEN 3 THEN '判断' END AS typeName, " +
-            "q.correct_answer AS correctAnswer, q.score " +
-            "FROM question q WHERE q.teacher_id=#{teacherId}")
+    @Update("UPDATE teacher SET password=#{password} WHERE teacher_id=#{teacherId}")
+    int updatePassword(@Param("teacherId") String teacherId,
+                       @Param("password") String password);
+
+    @Select("SELECT q.question_id AS \"questionId\", q.content, " +
+            "CASE q.question_type WHEN 1 THEN '单选' WHEN 2 THEN '多选' WHEN 3 THEN '判断' END AS \"typeName\", " +
+            "q.correct_answer AS \"correctAnswer\", q.score " +
+            "FROM question q WHERE q.teacher_id=#{teacherId} ORDER BY q.question_id DESC")
     List<Map<String, Object>> getQuestionsByTeacher(String teacherId);
 
-    @Select("SELECT e.exam_id AS examId, c.course_name AS courseName, " +
-            "COUNT(r.student_id) AS totalCount, " +
-            "MAX(r.total_score) AS maxScore, " +
-            "MIN(r.total_score) AS minScore, " +
-            "ROUND(AVG(r.total_score), 2) AS avgScore, " +
-            "SUM(r.is_pass) AS passCount " +
+    @Select("SELECT e.exam_id AS \"examId\", c.course_name AS \"courseName\", " +
+            "COUNT(r.student_id) AS \"totalCount\", " +
+            "MAX(r.total_score) AS \"maxScore\", " +
+            "MIN(r.total_score) AS \"minScore\", " +
+            "ROUND(AVG(r.total_score), 2) AS \"avgScore\", " +
+            "SUM(r.is_pass) AS \"passCount\" " +
             "FROM exam_result r " +
             "JOIN exam e ON r.exam_id = e.exam_id " +
             "JOIN course c ON e.course_id = c.course_id " +
             "JOIN exam_paper ep ON e.paper_id = ep.paper_id " +
-            "WHERE ep.teacher_id = #{teacherId} " +
+            "WHERE ep.teacher_id = #{teacherId} AND r.submitted_at IS NOT NULL " +
             "GROUP BY e.exam_id, c.course_name")
     List<Map<String, Object>> getExamStats(String teacherId);
 
-    @Select("SELECT s.student_id AS studentId, s.name AS studentName, " +
-            "s.class_name AS className, r.total_score AS totalScore, " +
-            "CASE WHEN r.is_pass=1 THEN '及格' ELSE '不及格' END AS isPass, " +
-            "r.submitted_at AS submittedAt " +
+    @Select("SELECT s.student_id AS \"studentId\", s.name AS \"studentName\", " +
+            "s.class_name AS \"className\", r.total_score AS \"totalScore\", " +
+            "CASE WHEN r.is_pass=1 THEN '及格' ELSE '不及格' END AS \"isPass\", " +
+            "r.submitted_at AS \"submittedAt\" " +
             "FROM exam_result r " +
             "JOIN student s ON r.student_id = s.student_id " +
-            "WHERE r.exam_id = #{examId} " +
+            "WHERE r.exam_id = #{examId} AND r.submitted_at IS NOT NULL " +
             "ORDER BY r.total_score DESC")
     List<Map<String, Object>> getStudentResultsByExam(int examId);
 
     // 查询教师的所有试卷
-    @Select("SELECT paper_id AS paperId, paper_name AS paperName, " +
-            "total_score AS totalScore, created_at AS createdAt " +
-            "FROM exam_paper WHERE teacher_id = #{teacherId}")
+    @Select("SELECT paper_id AS \"paperId\", paper_name AS \"paperName\", " +
+            "total_score AS \"totalScore\", created_at AS \"createdAt\" " +
+            "FROM exam_paper WHERE teacher_id = #{teacherId} ORDER BY paper_id DESC")
     List<Map<String, Object>> getPapersByTeacher(String teacherId);
 
     // 查询试卷里已有的题目
-    @Select("SELECT q.question_id AS questionId, q.content, " +
-            "CASE q.question_type WHEN 1 THEN '单选' WHEN 2 THEN '多选' WHEN 3 THEN '判断' END AS typeName, " +
-            "q.correct_answer AS correctAnswer, q.score, pq.question_order AS questionOrder " +
+    @Select("SELECT q.question_id AS \"questionId\", q.content, " +
+            "CASE q.question_type WHEN 1 THEN '单选' WHEN 2 THEN '多选' WHEN 3 THEN '判断' END AS \"typeName\", " +
+            "q.correct_answer AS \"correctAnswer\", q.score, pq.question_order AS \"questionOrder\" " +
             "FROM paper_question pq " +
             "JOIN question q ON pq.question_id = q.question_id " +
             "WHERE pq.paper_id = #{paperId} ORDER BY pq.question_order")
     List<Map<String, Object>> getQuestionsByPaper(int paperId);
 
     // 查询题库中不在该试卷里的题目
-    @Select("SELECT q.question_id AS questionId, q.content, " +
-            "CASE q.question_type WHEN 1 THEN '单选' WHEN 2 THEN '多选' WHEN 3 THEN '判断' END AS typeName, " +
+    @Select("SELECT q.question_id AS \"questionId\", q.content, " +
+            "CASE q.question_type WHEN 1 THEN '单选' WHEN 2 THEN '多选' WHEN 3 THEN '判断' END AS \"typeName\", " +
             "q.score " +
             "FROM question q " +
             "WHERE q.teacher_id = #{teacherId} " +
@@ -69,10 +72,10 @@ public interface TeacherMapper {
                                                     @Param("paperId") int paperId);
 
     // 查询教师的所有考试安排
-    @Select("SELECT e.exam_id AS examId, c.course_name AS courseName, " +
-            "ep.paper_name AS paperName, e.start_time AS startTime, " +
+    @Select("SELECT e.exam_id AS \"examId\", c.course_name AS \"courseName\", " +
+            "ep.paper_name AS \"paperName\", e.start_time AS \"startTime\", " +
             "e.duration AS duration, " +
-            "CASE e.status WHEN 0 THEN '未开始' WHEN 1 THEN '进行中' WHEN 2 THEN '已结束' END AS statusName, " +
+            "CASE e.status WHEN 0 THEN '未开始' WHEN 1 THEN '进行中' WHEN 2 THEN '已结束' END AS \"statusName\", " +
             "e.status AS status " +
             "FROM exam e " +
             "JOIN course c ON e.course_id = c.course_id " +
@@ -82,7 +85,7 @@ public interface TeacherMapper {
     List<Map<String, Object>> getExamsByTeacher(String teacherId);
 
     // 查询该教师的所有课程（用于创建考试时选课程）
-    @Select("SELECT course_id AS courseId, course_name AS courseName " +
+    @Select("SELECT course_id AS \"courseId\", course_name AS \"courseName\" " +
             "FROM course WHERE teacher_id = #{teacherId}")
     List<Map<String, Object>> getCoursesByTeacher(String teacherId);
 
@@ -166,4 +169,21 @@ public interface TeacherMapper {
                      @Param("optionD") String optionD,
                      @Param("correctAnswer") String correctAnswer,
                      @Param("score") double score);
+
+    @Select("SELECT COUNT(*) FROM question WHERE question_id=#{questionId} AND teacher_id=#{teacherId}")
+    int ownsQuestion(@Param("teacherId") String teacherId,
+                     @Param("questionId") int questionId);
+
+    @Select("SELECT COUNT(*) FROM exam_paper WHERE paper_id=#{paperId} AND teacher_id=#{teacherId}")
+    int ownsPaper(@Param("teacherId") String teacherId,
+                  @Param("paperId") int paperId);
+
+    @Select("SELECT COUNT(*) FROM exam e JOIN exam_paper p ON e.paper_id=p.paper_id " +
+            "WHERE e.exam_id=#{examId} AND p.teacher_id=#{teacherId}")
+    int ownsExam(@Param("teacherId") String teacherId,
+                 @Param("examId") int examId);
+
+    @Select("SELECT COUNT(*) FROM course WHERE course_id=#{courseId} AND teacher_id=#{teacherId}")
+    int ownsCourse(@Param("teacherId") String teacherId,
+                   @Param("courseId") String courseId);
 }

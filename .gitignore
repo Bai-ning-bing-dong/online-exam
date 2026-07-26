@@ -34,4 +34,12 @@ build/
 
 *.zip
 
-src/main/resources/application.properties
+### Local tooling ###
+.agents/
+.codex/
+
+### Keep only the Bootstrap asset used by the templates ###
+src/main/resources/static/bootstrap5/**
+!src/main/resources/static/bootstrap5/
+!src/main/resources/static/bootstrap5/css/
+!src/main/resources/static/bootstrap5/css/bootstrap.min.css

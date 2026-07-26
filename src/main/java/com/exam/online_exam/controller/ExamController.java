@@ -2,11 +2,14 @@ package com.exam.online_exam.controller;
 
 import com.exam.online_exam.entity.Student;
 import com.exam.online_exam.mapper.ExamMapper;
+import com.exam.online_exam.service.ExamSubmissionService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +19,8 @@ public class ExamController {
 
     @Autowired
     private ExamMapper examMapper;
+    @Autowired
+    private ExamSubmissionService examSubmissionService;
 
     // 考试列表
     @GetMapping("/exams")
@@ -40,16 +45,17 @@ public class ExamController {
             return "exam_done";
         }
 
-        // 记录开始时间（已记录过则不更新）
-        examMapper.recordStartTime(student.getStudentId(), examId);
-
-        // 计算剩余秒数
-        int duration = examMapper.getExamDuration(examId);
-        Integer elapsed = examMapper.getElapsedSeconds(student.getStudentId(), examId);
-        int remainSeconds = duration * 60 - (elapsed == null ? 0 : elapsed);
+        int remainSeconds;
+        try {
+            remainSeconds = examSubmissionService.startExam(student.getStudentId(), examId);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            model.addAttribute("msg", ex.getMessage());
+            return "exam_done";
+        }
 
         // 时间已到，直接跳转成绩页
         if (remainSeconds <= 0) {
+            examSubmissionService.finalizeExpired(student.getStudentId(), examId);
             return "redirect:/student/results";
         }
 
@@ -63,20 +69,18 @@ public class ExamController {
     // 提交答卷
     @PostMapping("/exam/submit")
     public String submitExam(@RequestParam int examId,
-                             @RequestParam Map<String, String> allParams,
-                             HttpSession session) {
+                             @RequestParam MultiValueMap<String, String> allParams,
+                             HttpSession session,
+                             RedirectAttributes redirectAttributes) {
         Student student = (Student) session.getAttribute("student");
         if (student == null) return "redirect:/";
 
-        // 遍历所有答案参数（格式：answer_题目ID）
-        for (Map.Entry<String, String> entry : allParams.entrySet()) {
-            if (entry.getKey().startsWith("answer_")) {
-                int questionId = Integer.parseInt(entry.getKey().replace("answer_", ""));
-                examMapper.submitAnswer(student.getStudentId(), examId,
-                        questionId, entry.getValue());
-            }
+        try {
+            examSubmissionService.submit(student.getStudentId(), examId, allParams);
+            return "redirect:/student/results";
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            redirectAttributes.addAttribute("error", ex.getMessage());
+            return "redirect:/student/exam/" + examId;
         }
-        examMapper.markSubmitted(student.getStudentId(), examId);
-        return "redirect:/student/results";
     }
 }

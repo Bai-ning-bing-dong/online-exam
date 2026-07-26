@@ -5,15 +5,20 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface StudentMapper {
-    @Select("SELECT * FROM student WHERE student_id=#{studentId} AND password=#{password}")
-    Student login(String studentId, String password);
+    @Select("SELECT * FROM student WHERE student_id=#{studentId}")
+    Student findById(@Param("studentId") String studentId);
+
+    @Update("UPDATE student SET password=#{password} WHERE student_id=#{studentId}")
+    int updatePassword(@Param("studentId") String studentId,
+                       @Param("password") String password);
 
     // 检查学号是否已存在
     @Select("SELECT COUNT(*) FROM student WHERE student_id=#{studentId}")
-    int checkStudentExists(String studentId);
+    int checkStudentExists(@Param("studentId") String studentId);
 
     // 注册新学生
     @Insert("INSERT INTO student(student_id, name, class_name, gender, password, email) " +
