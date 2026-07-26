@@ -2,7 +2,7 @@
 
 > 一个从课程作业持续工程化的 Java Web 项目，覆盖教师组卷、考试管理、学生限时作答、自动评分与成绩统计。
 
-[![CI](https://github.com/Bai-ning-bing-dong/java-test/actions/workflows/ci.yml/badge.svg)](https://github.com/Bai-ning-bing-dong/java-test/actions/workflows/ci.yml)
+[![CI](https://github.com/Bai-ning-bing-dong/online-exam/actions/workflows/ci.yml/badge.svg)](https://github.com/Bai-ning-bing-dong/online-exam/actions/workflows/ci.yml)
 ![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.6-6DB33F?logo=springboot&logoColor=white)
 ![MyBatis](https://img.shields.io/badge/MyBatis-4.0.1-red)
